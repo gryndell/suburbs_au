@@ -1,0 +1,29 @@
+#!/bin/bash
+# update_suburbs - Update the suburbs.sqlite database
+# Usage: update_suburbs
+
+cd $HOME
+rm -f $HOME/AU.zip $HOME/AU.txt $HOME/AU.inp $HOME/readme.txt
+echo "Retrieving data from geonames.org..."
+curl https://download.geonames.org/export/zip/AU.zip > \
+  $HOME/AU.zip && unzip $HOME/AU.zip
+echo "Indexing data..."
+
+ID=0
+
+while IFS= read -r line; do
+  ID=$(( $ID + 1 ))
+  echo "$line" | sed -e "s/^/$ID\t/" >> $HOME/AU.inp
+done < $HOME/AU.txt
+
+echo "Initialising database..."
+sqlite3 suburbs.sqlite < $HOME/suburbs.sql >> $HOME/update_suburbs.log 2>> \
+    $HOME/update_suburbs.err
+echo "Importing data..."
+sqlite3 suburbs.sqlite ".import $HOME/AU.inp locality" >> \
+    $HOME/update_suburbs.log 2>> $HOME/update_suburbs.err
+echo "Vacuuming database..."
+sqlite3 suburbs.sqlite "vacuum;" >> $HOME/update_suburbs.log 2>> \
+    $HOME/update_suburbs.err
+
+echo "Done."
