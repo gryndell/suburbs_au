@@ -18,23 +18,14 @@ function print_menu() {
 }
 
 function run_query() {
-  case $1 in
-    postal_code)
-      query="SELECT postal_code as 'Post Code', "
-      query="$query place_name as 'Place Name', "
-      query="$query admin_code1 as 'State' FROM locality WHERE"
-      query="$query postal_code = '$2';"
-      ;;
-    place_name)
-      query="SELECT postal_code as 'Post Code', "
-      query="$query place_name as 'Place Name', "
-      query="$query admin_code1 as 'State' FROM locality WHERE"
-      query="$query lower(place_name) = lower('$2');"
-      ;;
-    *)
-      echo "Invalid choice"
-      ;;
-  esac
+  query="SELECT postal_code as 'Post Code', "
+  query="$query place_name as 'Place Name', "
+  query="$query admin_code1 as 'State' FROM locality WHERE"
+  if [ "$1" == "postal_code" ]; then
+    query="$query $1 = '$2';"
+  else
+    query="$query lower($1) = lower('$2');"
+  fi
   result=$(sqlite3 $HOME/suburbs.sqlite "$query" 2>/dev/null)
   echo "$result"
 }
@@ -54,7 +45,8 @@ while true; do
             ;;
         2)
             read -p "Enter the Place Name: " place_name
-            echo "Place Name: $place_name"
+            place_name="$(echo "$place_name" | tr '[:upper:]' '[:lower:]')"
+            echo "Place Name: ${place_name^}"
             run_query "place_name" "$place_name"
             read -p "Press any key to continue..."
             ;;
