@@ -2,6 +2,7 @@
 # query_suburbs - Run a Query on the suburbs.sqlite database
 # Usage: query_suburbs
 #
+# todo:
 
 cd $HOME
 
@@ -9,36 +10,52 @@ cd $HOME
 # 1. Find the place_name with a given postal_code
 # 2. Find the postal_code of a given place_name
 
+function print_menu() {
+  echo "1. Find the Place Name(s) with a given Post Code"
+  echo "2. Find the Post Code of a given Place Name"
+  echo "q. Exit"
+  echo ""
+}
+
+function run_query() {
+  case $1 in
+    postal_code)
+      query="SELECT postal_code as 'Post Code', "
+      query="$query place_name as 'Place Name', "
+      query="$query admin_code1 as 'State' FROM locality WHERE"
+      query="$query postal_code = '$2';"
+      ;;
+    place_name)
+      query="SELECT postal_code as 'Post Code', "
+      query="$query place_name as 'Place Name', "
+      query="$query admin_code1 as 'State' FROM locality WHERE"
+      query="$query lower(place_name) = lower('$2');"
+      ;;
+    *)
+      echo "Invalid choice"
+      ;;
+  esac
+  result=$(sqlite3 $HOME/suburbs.sqlite "$query" 2>/dev/null)
+  echo "$result"
+}
+
 # Loop until the user quits
 while true; do
     clear
-    echo "1. Find the Place Name(s) with a given Post Code"
-    echo "2. Find the Post Code of a given Place Name"
-    echo "q. Exit"
-    echo ""
+    print_menu
 
     read -p "Enter your choice: " choice
     case $choice in
         1)
             read -p "Enter the Post Code: " postal_code
             echo "Post Code: $postal_code"
-            query="SELECT postal_code as 'Post Code', "
-            query="$query place_name as 'Place Name', "
-            query="$query admin_code1 as 'State' FROM locality WHERE"
-            query="$query postal_code = '$postal_code';"
-            result=$(sqlite3 $HOME/suburbs.sqlite "$query" 2>/dev/null)
-            echo "$result"
+            run_query "postal_code" "$postal_code"
             read -p "Press any key to continue..."
             ;;
         2)
             read -p "Enter the Place Name: " place_name
             echo "Place Name: $place_name"
-            query="SELECT postal_code as 'Post Code', "
-            query="$query place_name as 'Place Name', "
-            query="$query admin_code1 as 'State' FROM locality WHERE"
-            query="$query place_name = '$place_name';"
-            result=$(sqlite3 $HOME/suburbs.sqlite "$query" 2>/dev/null)
-            echo "$result"
+            run_query "place_name" "$place_name"
             read -p "Press any key to continue..."
             ;;
         q|Q)
