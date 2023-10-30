@@ -1,60 +1,69 @@
 #!/bin/bash
 # query_suburbs - Run a Query on the suburbs.sqlite database
 # Usage: query_suburbs
-#
+# For debugging, uncomment the following line
+# set -euxo pipefail
 # todo:
 
 cd $HOME
 
-# Print a menu of choices:
-# 1. Find the place_name with a given postal_code
-# 2. Find the postal_code of a given place_name
-
-function print_menu() {
-  echo "1. Find the Place Name(s) with a given Post Code"
-  echo "2. Find the Post Code of a given Place Name"
-  echo "q. Exit"
-  echo ""
-}
+# Ask for a place name or postal code
 
 function run_query() {
-  query="SELECT postal_code as 'Post Code', "
-  query="$query place_name as 'Place Name', "
-  query="$query admin_code1 as 'State' FROM locality WHERE"
-  if [ "$1" == "postal_code" ]; then
-    query="$query $1 = '$2';"
-  else
-    query="$query lower($1) = lower('$2');"
-  fi
+  # See how many results for response treated as a postal code
+  query="SELECT COUNT(id) FROM locality WHERE"
+  query="$query postal_code = '$1';"
   result=$(sqlite3 $HOME/suburbs.sqlite "$query" 2>/dev/null)
-  echo "$result"
+  # If none, then search as a place name
+  if [ "$result" == "0" ]; then
+    query="SELECT postal_code as 'Post Code', "
+    query="$query place_name as 'Place Name', "
+    query="$query admin_code1 as 'State' FROM locality WHERE"
+    query="$query lower(place_name) = lower('$1');"
+    result=$(sqlite3 $HOME/suburbs.sqlite "$query" -markdown 2>/dev/null)
+    # If none, try to find a match that begins with the search term
+    if [ "$result" == "" ]; then
+      query="SELECT postal_code as 'Post Code', "
+      query="$query place_name as 'Place Name', "
+      query="$query admin_code1 as 'State' FROM locality WHERE"
+      query="$query lower(place_name) like lower('$1%');"
+      result=$(sqlite3 $HOME/suburbs.sqlite "$query" -markdown 2>/dev/null)
+      if [ "$result" == "" ]; then
+        echo "No match found for '$1'"
+        return
+      else
+        echo "$result"
+      fi
+    else
+      echo "$result"
+    fi
+  else
+    query="SELECT postal_code as 'Post Code', "
+    query="$query place_name as 'Place Name', "
+    query="$query admin_code1 as 'State' FROM locality WHERE"
+    query="$query postal_code = '$1';"
+    result=$(sqlite3 $HOME/suburbs.sqlite "$query" -markdown 2>/dev/null)
+    if [ "$result" == "" ]; then
+      echo "No match found for '$1'"
+      return
+    else
+      echo "$result"
+    fi
+  fi
 }
 
 # Loop until the user quits
 while true; do
     clear
-    print_menu
 
-    read -p "Enter your choice: " choice
+    read -p "Enter a Place Name or Postcode (q to quit): " choice
     case $choice in
-        1)
-            read -p "Enter the Post Code: " postal_code
-            echo "Post Code: $postal_code"
-            run_query "postal_code" "$postal_code"
-            read -p "Press any key to continue..."
-            ;;
-        2)
-            read -p "Enter the Place Name: " place_name
-            place_name="$(echo "$place_name" | tr '[:upper:]' '[:lower:]')"
-            echo "Place Name: ${place_name^}"
-            run_query "place_name" "$place_name"
-            read -p "Press any key to continue..."
-            ;;
         q|Q)
             break
             ;;
         *)
-            echo "Invalid choice"
+            run_query "$choice"
+            read -p "Press any key to continue..."
             ;;
     esac
 done
