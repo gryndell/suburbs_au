@@ -10,46 +10,26 @@ cd $HOME
 # Ask for a place name or postal code
 
 function run_query() {
+  basequery="SELECT postal_code, place_name, admin_code1 FROM locality WHERE "
   # See how many results for response treated as a postal code
   query="SELECT COUNT(id) FROM locality WHERE"
   query="$query postal_code = '$1';"
   result=$(sqlite3 $HOME/suburbs.sqlite "$query" 2>/dev/null)
-  # If none, then search as a place name
+  # If none, then search as a place name or part thereof
   if [ "$result" == "0" ]; then
-    query="SELECT postal_code as 'Post Code', "
-    query="$query place_name as 'Place Name', "
-    query="$query admin_code1 as 'State' FROM locality WHERE"
-    query="$query lower(place_name) = lower('$1');"
+    query="$basequery lower(place_name) like lower('%$1%');"
     result=$(sqlite3 $HOME/suburbs.sqlite "$query" -markdown 2>/dev/null)
-    # If none, try to find a match that begins with the search term
     if [ "$result" == "" ]; then
-      query="SELECT postal_code as 'Post Code', "
-      query="$query place_name as 'Place Name', "
-      query="$query admin_code1 as 'State' FROM locality WHERE"
-      query="$query lower(place_name) like lower('$1%');"
-      result=$(sqlite3 $HOME/suburbs.sqlite "$query" -markdown 2>/dev/null)
-      if [ "$result" == "" ]; then
         echo "No match found for '$1'"
         return
-      else
-        echo "$result"
-      fi
     else
       echo "$result"
     fi
   else
-    query="SELECT postal_code as 'Post Code', "
-    query="$query place_name as 'Place Name', "
-    query="$query admin_code1 as 'State' FROM locality WHERE"
-    query="$query postal_code = '$1';"
+    query="$basequery postal_code = '$1';"
     result=$(sqlite3 $HOME/suburbs.sqlite "$query" -markdown 2>/dev/null)
-    if [ "$result" == "" ]; then
-      echo "No match found for '$1'"
-      return
-    else
-      echo "$result"
-    fi
-  fi
+    echo "$result"
+  fi # $result == "0"
 }
 
 # Loop until the user quits
@@ -63,7 +43,7 @@ while true; do
             ;;
         *)
             run_query "$choice"
-            read -p "Press any key to continue..."
+            read -p "Press <Enter> to continue..."
             ;;
     esac
 done
