@@ -18,7 +18,7 @@ function run_query() {
   # If none, then search as a place name or part thereof
   if [ "$result" == "0" ]; then
     query="$basequery lower(place_name) like lower('%$1%');"
-    result=$(sqlite3 $HOME/suburbs.sqlite "$query" -markdown 2>/dev/null)
+    result=$(sqlite3 $HOME/suburbs.sqlite "$query" -box 2>/dev/null)
     if [ "$result" == "" ]; then
         echo "No match found for '$1'"
         return
@@ -27,7 +27,7 @@ function run_query() {
     fi
   else
     query="$basequery postal_code = '$1';"
-    result=$(sqlite3 $HOME/suburbs.sqlite "$query" -markdown 2>/dev/null)
+    result=$(sqlite3 $HOME/suburbs.sqlite "$query" -box 2>/dev/null)
     echo "$result"
   fi # $result == "0"
 }
